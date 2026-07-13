@@ -1,0 +1,378 @@
+/**
+ * GitHub Repo Remark - Content Styles
+ * 适配 GitHub light/dark 主题
+ */
+
+/* ==================== CSS 变量 ==================== */
+:root {
+  --grr-bg: #f6f8fa;
+  --grr-border: #d0d7de;
+  --grr-text: #1f2328;
+  --grr-text-secondary: #656d76;
+  --grr-primary: #0969da;
+  --grr-primary-hover: #0860ca;
+  --grr-danger: #cf222e;
+  --grr-danger-hover: #a40e26;
+  --grr-card-shadow: 0 1px 3px rgba(31, 35, 40, 0.12);
+  --grr-input-bg: #ffffff;
+  --grr-input-border: #d0d7de;
+  --grr-input-focus: #0969da;
+  --grr-inline-bg: #ffffff;
+  --grr-btn-bg: #f6f8fa;
+  --grr-btn-hover: #eaeef2;
+  --grr-btn-active: #d0d7de;
+}
+
+[data-color-mode="dark"] {
+  --grr-bg: #161b22;
+  --grr-border: #30363d;
+  --grr-text: #e6edf3;
+  --grr-text-secondary: #8b949e;
+  --grr-primary: #58a6ff;
+  --grr-primary-hover: #79c0ff;
+  --grr-danger: #f85149;
+  --grr-danger-hover: #ff6b63;
+  --grr-card-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+  --grr-input-bg: #0d1117;
+  --grr-input-border: #30363d;
+  --grr-input-focus: #58a6ff;
+  --grr-inline-bg: #21262d;
+  --grr-btn-bg: #21262d;
+  --grr-btn-hover: #30363d;
+  --grr-btn-active: #484f58;
+}
+
+/* ==================== Detail 卡片 (仓库主页) ==================== */
+.grr-card--detail {
+  background: var(--grr-bg);
+  border: 1px solid var(--grr-border);
+  border-radius: 6px;
+  margin-top: 12px;
+  overflow: hidden;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans", Helvetica, Arial, sans-serif;
+  font-size: 13px;
+  color: var(--grr-text);
+  box-shadow: var(--grr-card-shadow);
+}
+
+.grr-card--detail .grr-card-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px;
+  background: var(--grr-bg);
+  border-bottom: 1px solid var(--grr-border);
+  font-weight: 600;
+  font-size: 12px;
+  color: var(--grr-text-secondary);
+}
+
+.grr-card--detail .grr-icon {
+  color: var(--grr-primary);
+  flex-shrink: 0;
+}
+
+.grr-card--detail .grr-card-header span {
+  flex: 1;
+}
+
+.grr-card--detail .grr-btn-edit {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2px 6px;
+  background: none;
+  border: 1px solid var(--grr-border);
+  border-radius: 4px;
+  color: var(--grr-text-secondary);
+  cursor: pointer;
+  font-size: 12px;
+  transition: all 0.15s ease;
+}
+
+.grr-card--detail .grr-btn-edit:hover {
+  background: var(--grr-btn-hover);
+  color: var(--grr-text);
+}
+
+.grr-card--detail .grr-card-body {
+  padding: 10px 12px;
+  min-height: 40px;
+}
+
+.grr-card--detail .grr-note-text {
+  color: var(--grr-text);
+  line-height: 1.5;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.grr-card--detail .grr-note-empty {
+  color: var(--grr-text-secondary);
+  font-style: italic;
+  font-size: 12px;
+}
+
+/* ==================== 编辑器 ==================== */
+.grr-card-editor {
+  padding: 10px 12px;
+}
+
+.grr-textarea {
+  width: 100%;
+  min-height: 60px;
+  padding: 8px;
+  background: var(--grr-input-bg);
+  border: 1px solid var(--grr-input-border);
+  border-radius: 4px;
+  color: var(--grr-text);
+  font-family: inherit;
+  font-size: 13px;
+  line-height: 1.5;
+  resize: vertical;
+  box-sizing: border-box;
+  transition: border-color 0.15s ease;
+}
+
+.grr-textarea:focus {
+  outline: none;
+  border-color: var(--grr-input-focus);
+  box-shadow: 0 0 0 2px rgba(9, 105, 218, 0.15);
+}
+
+[data-color-mode="dark"] .grr-textarea:focus {
+  box-shadow: 0 0 0 2px rgba(88, 166, 255, 0.15);
+}
+
+.grr-editor-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 6px;
+  gap: 8px;
+}
+
+.grr-char-count {
+  font-size: 11px;
+  color: var(--grr-text-secondary);
+  flex-shrink: 0;
+}
+
+.grr-editor-buttons {
+  display: flex;
+  gap: 6px;
+}
+
+.grr-btn-cancel {
+  padding: 4px 10px;
+  background: var(--grr-btn-bg);
+  border: 1px solid var(--grr-border);
+  border-radius: 4px;
+  color: var(--grr-text);
+  cursor: pointer;
+  font-size: 12px;
+  font-family: inherit;
+  transition: background 0.15s ease;
+}
+
+.grr-btn-cancel:hover {
+  background: var(--grr-btn-hover);
+}
+
+.grr-btn-save {
+  padding: 4px 10px;
+  background: var(--grr-primary);
+  border: 1px solid transparent;
+  border-radius: 4px;
+  color: #ffffff;
+  cursor: pointer;
+  font-size: 12px;
+  font-family: inherit;
+  transition: background 0.15s ease;
+}
+
+.grr-btn-save:hover {
+  background: var(--grr-primary-hover);
+}
+
+/* ==================== Inline 模式 (列表页) ==================== */
+.grr-card--inline {
+  display: inline-flex;
+  align-items: center;
+  position: relative;
+  vertical-align: middle;
+  margin-left: 6px;
+}
+
+.grr-inline-trigger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  padding: 2px;
+  border-radius: 3px;
+  transition: background 0.15s ease;
+  flex-shrink: 0;
+}
+
+.grr-inline-trigger:hover {
+  background: var(--grr-btn-hover);
+}
+
+/* Inline Tag - 直接展示的备注标签 */
+.grr-inline-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: 6px;
+  padding: 1px 8px;
+  background: #ddf4ff;
+  border: 1px solid #54aeff;
+  border-radius: 12px;
+  font-size: 11px;
+  color: #0969da;
+  cursor: pointer;
+  max-width: 200px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  transition: background 0.15s ease;
+  flex-shrink: 0;
+}
+
+[data-color-mode="dark"] .grr-inline-tag {
+  background: #0d419d;
+  border-color: #58a6ff;
+  color: #c8e1ff;
+}
+
+.grr-inline-tag:hover {
+  background: #b6e3ff;
+}
+
+[data-color-mode="dark"] .grr-inline-tag:hover {
+  background: #1a5bb3;
+}
+
+.grr-inline-tag-text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.grr-inline-tag-edit {
+  flex-shrink: 0;
+  opacity: 0.5;
+}
+
+.grr-inline-tag:hover .grr-inline-tag-edit {
+  opacity: 0.8;
+}
+
+.grr-inline-icon {
+  color: var(--grr-text-secondary);
+  opacity: 0.4;
+  transition: all 0.15s ease;
+}
+
+.grr-inline-icon.grr-has-note {
+  color: var(--grr-primary);
+  opacity: 0.8;
+}
+
+.grr-inline-trigger:hover .grr-inline-icon {
+  opacity: 1;
+}
+
+/* Inline Popup */
+.grr-inline-popup {
+  display: none;
+  position: absolute;
+  width: 300px;
+  max-width: 90vw;
+  background: var(--grr-inline-bg);
+  border: 1px solid var(--grr-border);
+  border-radius: 6px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+  z-index: 99999;
+  padding: 10px;
+}
+
+.grr-inline-popup.show {
+  display: block;
+}
+
+.grr-inline-popup .grr-inline-note {
+  color: var(--grr-text);
+  font-size: 12px;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  word-break: break-word;
+  margin-bottom: 8px;
+}
+
+.grr-inline-popup .grr-note-empty {
+  color: var(--grr-text-secondary);
+  font-style: italic;
+}
+
+.grr-inline-popup .grr-inline-editor {
+  margin-bottom: 8px;
+}
+
+.grr-inline-popup .grr-textarea {
+  min-height: 50px;
+  font-size: 12px;
+}
+
+.grr-inline-popup .grr-editor-actions {
+  margin-top: 6px;
+}
+
+.grr-inline-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 6px;
+}
+
+.grr-btn-edit-inline,
+.grr-btn-delete {
+  padding: 3px 8px;
+  background: var(--grr-btn-bg);
+  border: 1px solid var(--grr-border);
+  border-radius: 4px;
+  color: var(--grr-text);
+  cursor: pointer;
+  font-size: 11px;
+  font-family: inherit;
+  transition: background 0.15s ease;
+}
+
+.grr-btn-edit-inline:hover {
+  background: var(--grr-btn-hover);
+}
+
+.grr-btn-delete {
+  color: var(--grr-danger);
+  padding: 3px 6px;
+}
+
+.grr-btn-delete:hover {
+  background: var(--grr-danger);
+  color: #ffffff;
+  border-color: var(--grr-danger);
+}
+
+/* ==================== 动画 ==================== */
+@keyframes grr-fade-in {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.grr-card--detail {
+  animation: grr-fade-in 0.2s ease;
+}
+
+.grr-inline-popup.show {
+  animation: grr-fade-in 0.15s ease;
+}

@@ -1,0 +1,42 @@
+{
+  "manifest_version": 3,
+  "name": "GitHub Repo Remark",
+  "version": "1.0.0",
+  "description": "为 GitHub 仓库添加个人中文备注，支持仓库主页、Trending、Star 列表和搜索结果页",
+  "default_locale": "zh_CN",
+  "icons": {
+    "16": "icons/icon16.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  },
+  "permissions": [
+    "storage"
+  ],
+  "host_permissions": [
+    "https://github.com/*"
+  ],
+  "content_scripts": [
+    {
+      "matches": ["https://github.com/*"],
+      "css": ["content/content.css"],
+      "run_at": "document_end"
+    },
+    {
+      "matches": ["https://github.com/*"],
+      "js": ["content/nav-handler.js", "content/common.js", "content/main.js"],
+      "run_at": "document_end"
+    }
+  ],
+  "action": {
+    "default_popup": "popup/popup.html",
+    "default_title": "GitHub Repo Remark",
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "48": "icons/icon48.png",
+      "128": "icons/icon128.png"
+    }
+  },
+  "background": {
+    "service_worker": "background/service-worker.js"
+  }
+}
