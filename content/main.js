@@ -66,6 +66,7 @@
   registerHandler(PageType.REPO, async function repoPageHandler(repoName) {
     console.log('[Repo Remark] 仓库页面:', repoName);
     await injectRemarkCard(repoName);
+    startDomObserver();
   });
 
   registerHandler(PageType.TRENDING, listPageHandler);
@@ -75,117 +76,145 @@
   let cardContainer = null;
   let retryTimer = null;
 
+  /**
+   * 注入（或校正）仓库主页的备注卡片。
+   * 幂等：已在目标位置 → 什么都不做；位置不对 / 被 GitHub 重渲染清掉 → 重建。
+   * 注意：正在编辑时绝不能重建，否则会清掉用户输入。
+   */
   async function injectRemarkCard(repoName, attempt = 0) {
-    if (attempt > 30) {
-      console.log('[Repo Remark] 超时放弃注入:', repoName);
-      return;
-    }
-
-    if (attempt > 0) {
-      console.log('[Repo Remark] 重试注入 #' + attempt + ':', repoName);
-    }
-
     // 检查当前 URL 是否还是同一个仓库
     if (RemarkUtils.getRepoFullNameFromUrl() !== repoName) return;
 
-    // 移除旧卡片
-    if (cardContainer && cardContainer.parentNode) {
-      cardContainer.remove();
-      cardContainer = null;
-    }
-
-    // 移除所有已存在的卡片（防止重复）
-    document.querySelectorAll('.grr-card--detail').forEach(el => el.remove());
-
     // 尝试定位 About 区域
-    let aboutArea = findAboutArea();
+    const aboutArea = findAboutArea();
 
     if (!aboutArea) {
+      if (attempt >= 30) {
+        console.log('[Repo Remark] 超时放弃注入:', repoName);
+        return;
+      }
+      // 顶层调用时若已有重试链在跑，就不再叠加（自愈会高频触发）
+      if (attempt === 0 && retryTimer) return;
       clearTimeout(retryTimer);
-      retryTimer = setTimeout(() => injectRemarkCard(repoName, attempt + 1), 500);
+      retryTimer = setTimeout(() => {
+        retryTimer = null;
+        injectRemarkCard(repoName, attempt + 1);
+      }, 500);
       return;
     }
 
-    if (RemarkUtils.getRepoFullNameFromUrl() !== repoName) return;
+    const existing = document.querySelector('.grr-card--detail');
+
+    // 正在编辑 → 保持原样，不重建（避免丢失未保存的输入）
+    if (existing && isCardEditing(existing)) {
+      cardContainer = existing;
+      return;
+    }
+
+    // 已经在正确的容器里 → 幂等返回
+    if (existing && existing.parentElement === aboutArea && document.contains(existing)) {
+      cardContainer = existing;
+      return;
+    }
+
+    if (attempt > 0) console.log('[Repo Remark] 重试/校正注入 #' + attempt + ':', repoName);
+
+    // 移除旧卡片（位置不对的、或残留的）
+    document.querySelectorAll('.grr-card--detail').forEach(el => el.remove());
+    cardContainer = null;
 
     const card = await RemarkCard.create(repoName, 'detail');
-    cardContainer = card;
+    if (RemarkUtils.getRepoFullNameFromUrl() !== repoName) return;
+
     aboutArea.appendChild(card);
+    cardContainer = card;
     isActive = true;
-    console.log('[Repo Remark] 备注卡片已注入:', repoName);
+    console.log('[Repo Remark] 备注卡片已注入:', repoName,
+      '→', aboutArea.id || aboutArea.className);
   }
 
+  /** 卡片是否处于编辑态（编辑器可见） */
+  function isCardEditing(card) {
+    const editor = card.querySelector('.grr-card-editor');
+    return !!editor && editor.style.display !== 'none';
+  }
+
+  /**
+   * 定位备注卡片要插入的容器（仓库主页右侧栏）。
+   * GitHub 2025 起把仓库页换成了 Primer React + CSS Modules，
+   * 类名带 hash（如 SidebarSection-module__sidebarSection__e8jFN）且每次部署都会变，
+   * 所以优先用稳定的 data-component 属性 + 文案锚定，最后才回退到旧版类名。
+   */
   function findAboutArea() {
-    // 方案1：新版 GitHub 布局 - Layout-sidebar
+    // 方案1：新版仓库页侧栏 —— SplitPageLayout.Pane 内部的 borderGrid
+    const pane = document.querySelector('[data-component="SplitPageLayout.Pane"]');
+    if (pane) {
+      const grid = pane.querySelector('[class*="borderGrid"], [class*="BorderGrid"]');
+      if (grid) {
+        console.log('[Repo Remark] 找到新版侧栏 (SplitPageLayout.Pane > borderGrid)');
+        return grid;
+      }
+      if (pane.textContent && pane.textContent.indexOf('About') !== -1) {
+        console.log('[Repo Remark] 找到新版侧栏 (SplitPageLayout.Pane)');
+        return pane;
+      }
+    }
+
+    // 方案2：用 "About" 标题反向锚定侧栏容器（类名 hash 变化时仍然有效）
+    const headings = document.querySelectorAll('h2, h3');
+    for (const h of headings) {
+      if (h.textContent.trim() !== 'About') continue;
+      const section = h.closest('[class*="sidebarSection"], [class*="SidebarSection"]');
+      if (section && section.parentElement) {
+        console.log('[Repo Remark] 通过 About 标题锚定侧栏');
+        return section.parentElement;
+      }
+    }
+
+    // 方案3：旧版布局 .Layout-sidebar
     const sidebar = document.querySelector('.Layout-sidebar');
     if (sidebar) {
       console.log('[Repo Remark] 找到 Layout-sidebar');
       return sidebar;
     }
 
-    // 方案2：BorderGrid 布局（旧版）
+    // 方案4：旧版布局 .BorderGrid
     const borderGrid = document.querySelector('.BorderGrid');
     if (borderGrid) {
       console.log('[Repo Remark] 找到 BorderGrid');
       return borderGrid.parentElement || borderGrid;
     }
 
-    // 方案3：About 区域的各种选择器
-    const aboutSelectors = [
-      '[data-component="about"]',
-      '.BorderGrid-row:first-child',
-      '.repository-content .BorderGrid',
-    ];
-    for (const sel of aboutSelectors) {
-      const el = document.querySelector(sel);
-      if (el) {
-        console.log('[Repo Remark] 找到 About 区域:', sel);
-        return el;
-      }
-    }
-
-    // 方案4：查找 repo 描述附近的容器
-    const descEl = document.querySelector('[itemprop="description"], .f4.my-3');
+    // 方案5：repo 描述附近的容器
+    const descEl = document.querySelector(
+      '[itemprop="description"], .f4.my-3, [class*="SidebarAbout-module__description"]'
+    );
     if (descEl) {
-      const container = descEl.closest('.BorderGrid-row');
-      if (container) {
-        const wrapper = document.createElement('div');
-        container.parentElement.insertBefore(wrapper, container.nextSibling);
-        console.log('[Repo Remark] 在描述旁创建容器');
-        return wrapper;
-      }
-      const parent = descEl.parentElement;
-      if (parent) {
-        const wrapper = document.createElement('div');
-        parent.appendChild(wrapper);
-        console.log('[Repo Remark] 在描述父元素中创建容器');
-        return wrapper;
-      }
+      const container = descEl.closest('[class*="sidebarSection"], .BorderGrid-row');
+      if (container && container.parentElement) return container.parentElement;
+      if (descEl.parentElement) return descEl.parentElement;
     }
 
-    // 方案5：仓库头部容器
+    // 方案6：仓库头部（位置不理想，但至少用户能看到）
     const repoHeader = document.querySelector('#repository-container-header');
     if (repoHeader) {
       console.log('[Repo Remark] 使用仓库头部作为 Fallback');
       return repoHeader;
     }
 
-    // 方案6：主内容区域
-    const mainContent = document.querySelector('#repo-content-pjax-container, [data-turbo-frame="repo-content-turbo-frame"]');
-    if (mainContent) {
-      console.log('[Repo Remark] 使用主内容区作为 Fallback');
-      return mainContent;
-    }
-
-    console.log('[Repo Remark] 未找到合适的注入位置, attempt:', arguments[0]);
     return null;
   }
 
   // ==================== 列表页处理器 (Trending/Stars/Search) ====================
-
-  let processedRepos = new Set();
+  //
+  // 去重策略：以「行元素」为单位（WeakSet），而不是仓库名。
+  // GitHub 的搜索结果/仓库页现在是 React 渲染，水合或重新查询时整行元素会被替换，
+  // 用仓库名去重会导致新元素永远补不上标识（= 「有时候标识不出现」）。
+  // 用元素去重 + 每轮校验标识是否仍在 DOM 中，被抹掉就能自动补回。
+  const processedRows = new WeakSet();
   let domObserver = null;
   let injectDebounce = null;
+  let suppressObserver = false;   // 忽略自身写入引发的 mutation，避免自触发循环
 
   async function listPageHandler(pageType) {
     console.log('[Repo Remark] 列表页面:', pageType);
@@ -198,22 +227,30 @@
     const rows = findRepoRows();
 
     for (const row of rows) {
+      // 快路径：该行已注入且标识还在 → 跳过
+      if (processedRows.has(row) && row.querySelector('.grr-card--inline')) continue;
+
       const repoLink = findRepoLink(row);
       if (!repoLink) continue;
 
       const repoName = RemarkUtils.getRepoFullNameFromLink(repoLink);
-      if (!repoName || processedRepos.has(repoName)) continue;
+      if (!repoName) continue;
 
       // 跳过已经是当前仓库主页的链接（避免在主页面重复）
       if (repoName === currentRepoName) continue;
 
-      processedRepos.add(repoName);
-
       const titleEl = findTitleElement(row, repoLink);
-      if (!titleEl || titleEl.querySelector('.grr-card--inline')) continue;
+      if (!titleEl) continue;  // 还没渲染完，下一轮再试
+
+      // 标识已在 → 只补记元素，不重复插入
+      if (titleEl.querySelector('.grr-card--inline')) {
+        processedRows.add(row);
+        continue;
+      }
 
       const inlineCard = await RemarkCard.create(repoName, 'inline');
       titleEl.appendChild(inlineCard);
+      processedRows.add(row);
     }
   }
 
@@ -234,18 +271,15 @@
       if (rows.length > 0) { console.log('[Repo Remark] Stars 找到', rows.length, '个仓库链接'); return rows; }
     }
 
-    // Search 页 - 新版 GitHub 搜索
+    // Search 页 - GitHub 2025 起为 React + CSS Modules 渲染
     if (pageType === PageType.SEARCH) {
-      // 新版搜索选择器
       const newSearchSels = [
-        '[data-testid="results-list"] > div',
-        '[data-testid="results-list"] > *',
-        '.search-title-wrap',
-        'div[data-testid="search-results"] > div',
-        '#search-results-container .Box-row',
+        '[data-testid="results-list"] > div',   // 新版（实测命中）
+        '[class*="Result-module__Result"]',     // 新版（class 前缀匹配）
+        '[class*="Repositories-module__resultRow"]',
+        '.search-title-wrap',                   // 旧版
         '.repo-list-item',
         '.repo-list li',
-        '[class*="search"] [data-testid]',
       ];
       for (const sel of newSearchSels) {
         const rows = document.querySelectorAll(sel);
@@ -260,7 +294,7 @@
     let repoLinks = document.querySelectorAll('a[data-hovercard-type="repository"]');
     console.log('[Repo Remark] fallback hovercard链接:', repoLinks.length);
 
-    // 如果没有 hovercard 链接（搜索页可能出现），找所有 /owner/repo 格式的链接
+    // 如果没有 hovercard 链接（新版页面已去掉该属性），找所有 /owner/repo 格式的链接
     if (repoLinks.length === 0) {
       const allLinks = document.querySelectorAll('a[href^="/"]');
       repoLinks = Array.from(allLinks).filter(link => {
@@ -278,7 +312,7 @@
 
     const parentRows = new Set();
     repoLinks.forEach(link => {
-      const row = link.closest('article, li, .col-12, [class*="Box-row"], .d-block, [class*="width-full"], [class*="py-4"], [class*="search-title"], .Box-row');
+      const row = link.closest('[data-testid="results-list"] > div, [class*="Result-module__Result"], article, li, .col-12, [class*="Box-row"], .d-block, [class*="width-full"], [class*="py-4"], [class*="search-title"], .Box-row');
       if (row) parentRows.add(row);
       else parentRows.add(link); // 找不到容器就用 link 本身
     });
@@ -292,11 +326,13 @@
       const href = row.getAttribute('href');
       if (href.match(/^\/([^\/]+)\/([^\/]+)/)) return row;
     }
-    // 查找 hovercard 链接
+    // 查找 hovercard 链接（旧版页面）
     const hcLink = row.querySelector('a[data-hovercard-type="repository"]');
     if (hcLink) return hcLink;
-    // 查找标题链接
-    const titleLink = row.querySelector('h2 a, h1 a, h3 a, .f4 a, .f3 a, [class*="f3"] a, [class*="f4"] a');
+    // 查找标题链接（新版搜索结果标题容器为 .search-title / Header-module__title）
+    const titleLink = row.querySelector(
+      '.search-title a[href^="/"], [class*="Header-module__title"] a[href^="/"], h2 a, h1 a, h3 a, .f4 a, .f3 a, [class*="f3"] a, [class*="f4"] a'
+    );
     if (titleLink) return titleLink;
     // 查找任何 /owner/repo 格式的链接
     const links = row.querySelectorAll('a[href^="/"]');
@@ -309,18 +345,44 @@
   }
 
   function findTitleElement(row, repoLink) {
-    return repoLink.closest('h2, h1, h3, .f4, .f3, [class*="f3"], [class*="f4"]') || repoLink.parentElement;
+    // 新版搜索结果：插到标题容器里（紧跟仓库名），而不是外层 h3，避免掉到下一行
+    return repoLink.closest(
+      '.search-title, [class*="Header-module__title"], [class*="Repositories-module__headerRow"], h2, h1, h3, .f4, .f3, [class*="f3"], [class*="f4"]'
+    ) || repoLink.parentElement;
   }
 
   function startDomObserver() {
     if (domObserver) return;
-    let timer;
     domObserver = new MutationObserver(() => {
-      clearTimeout(timer);
+      if (suppressObserver) return;
       clearTimeout(injectDebounce);
-      injectDebounce = setTimeout(injectInlineRemarks, 500);
+      injectDebounce = setTimeout(selfHeal, 400);
     });
     domObserver.observe(document.body, { childList: true, subtree: true });
+  }
+
+  /**
+   * 自愈：GitHub 的 React 重渲染会连带清掉我们注入的节点，
+   * 检测到缺失就补回。注入过程对 observer 静默，防止自触发死循环。
+   */
+  async function selfHeal() {
+    const type = detectPageType();
+    if (type === PageType.OTHER) return;
+
+    suppressObserver = true;
+    try {
+      if (type === PageType.REPO) {
+        const repoName = RemarkUtils.getRepoFullNameFromUrl();
+        if (repoName) await injectRemarkCard(repoName);
+      } else if (type === PageType.TRENDING || type === PageType.STARS || type === PageType.SEARCH) {
+        await injectInlineRemarks();
+      }
+    } catch (e) {
+      console.warn('[Repo Remark] 自愈失败:', e);
+    } finally {
+      // 等本轮 mutation 记录派发完再恢复监听，否则会把自身写入当成页面变化
+      setTimeout(() => { suppressObserver = false; }, 0);
+    }
   }
 
   // ==================== SPA 导航处理 ====================
@@ -350,10 +412,7 @@
     }
     document.querySelectorAll('.grr-card--detail').forEach(el => el.remove());
 
-    if (newType !== currentPageType) {
-      processedRepos.clear();
-    }
-
+    // 注：processedRows 是元素级 WeakSet，旧元素随 DOM 一起被回收，无需清理
     currentPageType = newType;
 
     // 分发到对应处理器
