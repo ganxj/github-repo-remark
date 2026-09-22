@@ -25,9 +25,13 @@ GitHub 上 Star 了很多仓库，但描述大多是英文，有些描述也说�
 3. 开启右上角 "开发者模式"
 4. 点击 "加载已解压的扩展程序" → 选择项目目录
 
-### Chrome Web Store（待上架）
+### Chrome Web Store
 
-等待审核通过后可在 Chrome Web Store 搜索安装。
+[![Chrome Web Store](https://img.shields.io/badge/Chrome%20Web%20Store-GitHub%20Repo%20Remark-blue?logo=googlechrome&logoColor=white)](https://chromewebstore.google.com/detail/github-repo-remark/jigeibgngdhfegnlpjhhhfjckngjcfic)
+
+👉 <https://chromewebstore.google.com/detail/github-repo-remark/jigeibgngdhfegnlpjhhhfjckngjcfic>
+
+点击「添加至 Chrome」即可安装，无需开发者模式。
 
 ## 技术栈
 
